@@ -16,11 +16,13 @@ function oneplus(nin::Int64, nout::Int64, fitness::Function;
     fits = -Inf*ones(Float64, Config.lambda)
 
     while eval_count < Config.total_evals
-        # evaluation
         log_gen = false
         for p in eachindex(population)
+           
             if fits[p] == -Inf
+                println("Evaluation:",eval_count+1," - population:",p)
                 fit = fitness(population[p])
+                println("Accuracy: ",fit)
                 eval_count += 1
                 if fit >= max_fit
                     best = clone(population[p])
@@ -36,7 +38,7 @@ function oneplus(nin::Int64, nout::Int64, fitness::Function;
                 end
             end
         end
-
+        
         eval(Config.log_function)(id, seed, eval_count, max_fit, best, GA,
                                   ctype, log_gen)
 
@@ -44,11 +46,14 @@ function oneplus(nin::Int64, nout::Int64, fitness::Function;
             break
         end
 
+       
+        
         # selection
         fits .= -Inf
         for p in eachindex(population)
             population[p] = mutate(best)
         end
+        
 
         # size limit
         for i in eachindex(population)
@@ -57,7 +62,10 @@ function oneplus(nin::Int64, nout::Int64, fitness::Function;
                 fits[i] = -Inf
             end
         end
+        println("_________________________________________\n")
     end
-
+    println("_________________________________________")
+    println("Max Accuracy:", max_fit)
+    println("_________________________________________\n")
     max_fit, best.genes
 end
