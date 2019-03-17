@@ -66,7 +66,7 @@ function blueScore(c::Chromosome, data::Array{Any,2}, nin::Int64, nout::Int64)
         println("<<< Training >>>")
 
         now = Dates.now()
-        accuracy += computeParallel(c, startIndex, endIndex, data[startIndex:endIndex,:], images, nin, nout, Threads.Atomic{Float64}(0.0))
+        accuracy += computeParallel(c, startIndex, endIndex, data, images, nin, nout, Threads.Atomic{Float64}(0.0))
         println("paralle time: $(Dates.value(Dates.now()-now)/1000)s")
 
     end

@@ -4,3 +4,4 @@
 deps/deps.jl
 data/images/
 /image_caption.log
+image_caption.log
