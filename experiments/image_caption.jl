@@ -4,6 +4,8 @@ using ArgParse
 using JSON
 using Images
 using FileIO
+using Base.Threads
+using Dates
 CGP.Config.init("cfg/image_caption.yaml")
 
 
@@ -13,32 +15,62 @@ function overprint(str)
     print(str)
 end
 
-function blueScore(c::Chromosome, data::Array{Any,2}, nin::Int64, nout::Int64)
-    accuracy = 0
-    nsamples = size(data, 1)
+function computeParallel(c::Chromosome, startIndex::Int64, endIndex::Int64, data::Array{Any,2}, images::Dict{Any,Any}, nin::Int64, nout::Int64, accuracy::Base.Threads.Atomic{Float64})::Float64
+    @threads for d in startIndex:endIndex
 
-    prevImgPath = string("data/images/",data[1,1],".jpg")
-    img = load(prevImgPath)
-   
-    
-    for d in 1:nsamples
-        overprint(string(d,"/",nsamples))
-        imgPath= string("data/images/",data[d,1],".jpg")
-        if imgPath != prevImgPath
-            img = load(imgPath)
-            prevImgPath=imgPath
-        end
-        
+        imagePath = string("data/images/",data[d,1],".jpg")
+        img = images[imagePath]
         r = Float64.(red.(img))
         g = Float64.(green.(img))
         b = Float64.(blue.(img))
+
         outputs = process(c,[r,g,b,data[d,2:nin-1]...])
         if indmax(outputs)==data[d,nin-1]
-            accuracy += 1
+            atomic_add!(accuracy,1.0)
         end
-        
-    
     end
+    accuracy[]
+end
+
+function blueScore(c::Chromosome, data::Array{Any,2}, nin::Int64, nout::Int64)
+    
+    accuracy =  0.0
+    batchSize = 1000
+    nsamples = size(data, 1)
+    nbatches = Int64(ceil(nsamples/batchSize))
+    
+    
+    for batch in 1:nbatches
+
+        startIndex = (batch-1)*batchSize + 1 
+        endIndex = batch*batchSize<nsamples? batch*batchSize:nsamples
+        
+        images = Dict()
+        prevImgPath = string("data/images/",data[startIndex,1],".jpg")
+        img = load(prevImgPath)
+        images[prevImgPath] = img
+
+
+        
+        println("batch:",batch,"/",nbatches)
+        println("loading images batch: $(startIndex):$(endIndex)")
+        for sample in startIndex:endIndex
+            imgPath= string("data/images/$(data[sample,1]).jpg")
+            if imgPath != prevImgPath
+                img = load(imgPath)
+                prevImgPath=imgPath
+                images[imgPath] = img
+            end
+        end
+        println("image Batch Loaded Successfully")
+        println("<<< Training >>>")
+
+        now = Dates.now()
+        accuracy += computeParallel(c, startIndex, endIndex, data[startIndex:endIndex,:], images, nin, nout, Threads.Atomic{Float64}(0.0))
+        println("paralle time: $(Dates.value(Dates.now()-now)/1000)s")
+
+    end
+
     accuracy /= nsamples
     println()
     accuracy

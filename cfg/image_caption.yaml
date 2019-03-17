@@ -7,7 +7,7 @@ weights: True
 mutate_method: ":gene_mutate"
 crossover_method: ":single_point_crossover"
 recurrency: 0.1
-total_evals: 10
+total_evals: 21
 input_start: -1.0
 # Logging settings
 save_best: True
